@@ -1,0 +1,19 @@
+# install venv
+python -m pip install virtualenv
+
+# create the venv
+python -m venv venv
+
+# activate the venv
+
+    mac:
+        source venv/bin/activate
+    win:
+        venv\Scripts\activate
+
+
+To create new file within directory: echo > filename
+
+status codes (found in the network section of inspect):
+- in the 200s, good request.
+- in the 400s, bad request.
