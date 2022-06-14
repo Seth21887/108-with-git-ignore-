@@ -1,7 +1,9 @@
 import json #importing json will allow us to import lists through JSON notation
-from flask import Flask, abort
+from flask import Flask, abort, request
 from about_me import me
 from mock_data import catalog
+from config import db
+from bson import ObjectId
 
 app = Flask('Project')
 
@@ -27,15 +29,39 @@ def address():
 #the catalog that we are retrieving is just a python list of dictionaries.
 @app.route("/api/catalog", methods=["GET"]) 
 def get_catalog():
-    return json.dumps(catalog) #the function dumps will convert some python object to json notation.
+    results = []
+    cursor = db.products.find({}) #get all the data from the collection
+
+    for prod in cursor:
+        prod["_id"] = str(prod["_id"])
+        results.append(prod)
+
+    return json.dumps(results) #the function dumps will convert some python object to json notation.
+
+    
+
+#POST Method to create new products
+@app.route("/api/catalog", methods=["POST"])
+def save_products():
+    product = request.get_json()    
+    db.products.insert_one(product)
+
+    product["_id"] = str(product["_id"])
+
+    return json.dumps(product)
+
 
 #make an endpoint to send back how many products we have in the catalog
 @app.route("/api/catalog/count", methods=["GET"])
 def get_count():
+    cursor = db.products.find({})
+    num_items = 0
+    for prod in cursor:
+        num_items += 1
     #Here...count how many products are in the list catalog
-    counts = len(catalog)
+    # counts = len(catalog)
 
-    return json.dumps(counts) #return the value
+    return json.dumps(num_items) #return the value
 
 #Request 127.0.0.1:5000/api/product/1 (1 is the product _id here)
 #instead of doing that for each product, it should be dynamic
@@ -58,7 +84,8 @@ def get_product(id):
 @app.get("/api/catalog/total")
 def get_total():
     total = 0
-    for prod in catalog:
+    cursor = db.products.find({})
+    for prod in cursor:
         # total = total + prod["price"]
         total += prod["price"]
 
@@ -82,8 +109,9 @@ def products_by_category(category):
 #get /api/categories
 @app.get("/api/categories")
 def get_categories():
+    cursor = db.products.find({})
     categories=[]
-    for prod in catalog:
+    for prod in cursor:
         cat = prod["category"]
         #if category doesn't already exist in results, then I will append.
         #google question: if a string exists inside a list in python
@@ -95,11 +123,13 @@ def get_categories():
 #get the cheapest product
 @app.get("/api/products/cheapest")
 def get_cheapest_product():
-    solution = catalog[0] #usually here, we can use any number at random, it won't make a difference where we start.
-    for prod in catalog:
+    cursor = db.products.find({})
+    solution = cursor[0] #usually here, we can use any number at random, it won't make a difference where we start.
+    for prod in cursor:
         if prod["price"] < solution["price"]:
             solution = prod
     
+    solution["_id"] = str(solution["_id"])
     return json.dumps(solution)
 
 @app.get("/api/exercise1")
