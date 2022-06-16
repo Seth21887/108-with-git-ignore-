@@ -43,12 +43,33 @@ def get_catalog():
 #POST Method to create new products
 @app.route("/api/catalog", methods=["POST"])
 def save_products():
-    product = request.get_json()    
-    db.products.insert_one(product)
+    try:
+        product = request.get_json()
+        errors = ""    
 
-    product["_id"] = str(product["_id"])
+        # make sure title exists in the product dictionary, if not, return bad request
+        #5 characters long, if shorter, show error
+        if not "title" in product or len(product["title"]) < 5:
+            errors = "Title is required and should have at least 5 characters."
 
-    return json.dumps(product)
+        # must have an image
+        if not "image" in product:
+            errors += "Image is required"
+
+        #must have a price, the price should be greater/equal to 1
+        if not "price" in product or product["price"] < 1:
+            errors += "Price is required and should be >= 1"
+
+        if errors:
+            return abort(400, errors)
+
+        db.products.insert_one(product)
+
+        product["_id"] = str(product["_id"])
+
+        return json.dumps(product)
+    except Exception as ex:
+        return abort(500, F"Unexpected error: {ex}")
 
 
 #make an endpoint to send back how many products we have in the catalog
@@ -68,17 +89,32 @@ def get_count():
 #by using <id>, now anything we enter as the endpoint, will show up
 @app.route("/api/product/<id>", methods=["GET"])
 def get_product(id):
+    try:
+        if not ObjectId.is_valid(id):
+            return abort(400, "Invalid ID")
+
+        product = db.products.find_one({"_id": ObjectId(id)})
+
+        if not product:
+            return abort(404, "Product not found")
+
+        product["_id"] = str(product["_id"])
+        return json.dumps(product)
+    
+    #instead of crashing, using a try-except will just do what you want it to do when an invalid id is entered.
+    except:
+        return abort(500, "Unexpected error")
     #find the product whose _id is equal to id
     #travel mock_data with a for loop
     #get every product inside the list
     #if the _id of the product is equal to the id variable, found it.
     #return the product as json.
-    for prod in catalog:
-        if prod["_id"] == id:
-            return json.dumps(prod)
+    # for prod in catalog:
+    #     if prod["_id"] == id:
+    #         return json.dumps(prod)
     
     #return an error code
-    return abort(404, "ID does not match any product")
+    # return abort(404, "ID does not match any product")
 
 #Create an endpoint that returns the SUM of all the products prices
 @app.get("/api/catalog/total")
@@ -96,10 +132,14 @@ def get_total():
 @app.get("/api/products/<category>")
 def products_by_category(category):
     results = []
-    category = category.lower() #doing this only once is better than parsing a million times if adding the .lower() on the if statement below.
-    for prod in catalog:
-        if prod["category"].lower() == category: # == will always be case sensitive, the solution is to parse both sides to a common ground.
-            results.append(prod)
+    cursor = db.products.find({"category": category})
+
+    # category = category.lower() #doing this only once is better than parsing a million times if adding the .lower() on the if statement below.
+    for prod in cursor:
+        prod["_id"] = str(prod["_id"])
+        results.append(prod)
+        # if prod["category"].lower() == category: # == will always be case sensitive, the solution is to parse both sides to a common ground.
+        #     results.append(prod)
     return json.dumps(results)
         
     return abort (404, "Category does not exist")
@@ -146,6 +186,34 @@ def get_exe1():
     # D. findthe sum of numbers except negatives
 
     return json.dumps(solution)
+
+
+#####################################################COUPON CODES ####################################################
+
+#get all
+@app.route("/api/coupons", methods=["GET"])
+def get_all_coupons():
+    cursor = db.coupons.find({})
+    results = []
+    for cc in cursor:
+        cc["_id"] = str(cc["_id"])
+        results.append(cc)
+
+    return json.dumps(results)
+
+#save coupon code
+@app.route("/api/coupons", methods=["POST"])
+def save_coupon():
+    coupon = request.get_json()
+
+    #validations
+
+    db.coupons.insert_one(coupon)
+
+    coupon["_id"] = str(coupon["_id"])
+    return json.dumps(coupon)
+
+#get CC by code
 
 
 app.run(debug=True)
