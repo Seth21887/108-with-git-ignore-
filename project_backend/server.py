@@ -4,8 +4,10 @@ from about_me import me
 from mock_data import catalog
 from config import db
 from bson import ObjectId
+from flask_cors import CORS
 
 app = Flask('Project')
+CORS(app)
 
 @app.route("/", methods=["GET"]) #this is a decorator in python, the route will define an endpoint. the / means the root. The GET method means the user is trying to get something from the server
 def home():

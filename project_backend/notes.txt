@@ -17,3 +17,5 @@ To create new file within directory: echo > filename
 status codes (found in the network section of inspect):
 - in the 200s, good request.
 - in the 400s, bad request.
+
+python -m pip install flask-cors
