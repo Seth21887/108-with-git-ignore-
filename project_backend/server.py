@@ -207,6 +207,19 @@ def save_coupon():
     coupon = request.get_json()
 
     #validations
+    #discount must be between 1 and 50%
+    #code should have at least 5 characters
+    if not "code" in coupon or len(coupon["code"]) < 5:
+        return abort(400, "Coupon should have at least 5 chars")
+
+    if not "discount" in coupon or coupon["discount"] < 1 or coupon["discount"] > 50:
+        return abort(400, "Discount is required and should be between 1 and 50")
+
+    #do not allow duplicate code
+    #query database to see if there is an object with the same code, if there is return an error, otherwise save.
+    exist = db.coupons.find_one({"code"})
+    if exist:
+        return abort(400, "A coupon already exists for that code")
 
     db.coupons.insert_one(coupon)
 
@@ -214,6 +227,15 @@ def save_coupon():
     return json.dumps(coupon)
 
 #get CC by code
+@app.route("/api/coupons/<code>", methods=["GET"])
+def get_coupons_by_code(code):
+
+    coupon = db.coupons.find_one({"code": code})
+    if not coupon:
+        return abort(404,"Coupon not found")
+
+    coupon["_id"] = str(coupon["_id"])
+    return json.dumps(coupon)
 
 
 app.run(debug=True)
